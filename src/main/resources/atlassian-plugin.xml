@@ -1,0 +1,40 @@
+<atlassian-plugin key="${atlassian.plugin.key}" name="${project.name}" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}" />
+        <param name="plugin-icon">images/pluginIcon.png</param>
+        <param name="plugin-logo">images/pluginLogo.png</param>
+    </plugin-info>
+
+    <component-import key="ao" name="Active Objects service"
+                      interface="com.atlassian.activeobjects.external.ActiveObjects">
+        <description>Component to access Active Objects functionality from the plugin</description>
+    </component-import>
+
+    <ao key="ao-module">
+        <description>The module configuring the Active Objects service used by this plugin</description>
+        <entity>com.globant.plugins.PullRequest</entity>
+        <entity>com.globant.plugins.PRBuilderConfig</entity>
+    </ao>
+
+    <component key="tx-processor" name="Transactional Annotation Processor"
+               class="com.atlassian.activeobjects.external.TransactionalAnnotationProcessor">
+        <decription>Processes @Transactional annotations.</decription>
+    </component>
+
+    <component key="pr-service" name="PullRequest Service" class="com.globant.plugins.PullRequestServiceImpl"/>
+    <component key="pr-config-service" name="ProjectConfig Service" class="com.globant.plugins.PRBuilderConfigServiceImpl"/>
+
+    <servlet name="Github Pull Request Builder Servlet" class="com.globant.plugins.PRBuilderServlet" key="ghprbuilder">
+        <description>A servlet to trigger builds from Pull Request webhooks</description>
+        <url-pattern>/ghprbuilder</url-pattern>
+    </servlet>
+
+    <servlet name="Github Pull Request Builder Servlet Config" class="com.globant.plugins.PRBuilderConfigServlet" key="ghprbuilder-config">
+        <description>A servlet to configure the Github Pull Request Builder Plugin</description>
+        <url-pattern>/ghprbuilder</url-pattern>
+        <url-pattern>/ghprbuilder/config</url-pattern>
+    </servlet>
+
+</atlassian-plugin>
