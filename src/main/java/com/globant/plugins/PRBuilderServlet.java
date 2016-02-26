@@ -8,17 +8,15 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.atlassian.bamboo.plugins.git.GitRepository;
 import com.atlassian.bamboo.user.BambooUserManager;
 import com.atlassian.bamboo.plan.cache.ImmutableChain;
 import com.atlassian.bamboo.plan.ExecutionRequestResult;
 import com.atlassian.bamboo.plan.Plan;
 import com.atlassian.bamboo.plan.PlanExecutionManager;
 import com.atlassian.bamboo.plan.PlanHelper;
-import com.atlassian.bamboo.plan.PlanKey;
 import com.atlassian.bamboo.plan.PlanResultKey;
 import com.atlassian.bamboo.plan.PlanManager;
-import com.atlassian.bamboo.plugins.git.GitHubRepository;
-import com.atlassian.bamboo.project.Project;
 import com.atlassian.user.User;
 
 import org.json.simple.JSONObject;
@@ -88,10 +86,16 @@ public class PRBuilderServlet extends HttpServlet
                 {
                     // Get plan and maybe build it
                     Plan plan = planManager.getPlanById(prBuilderConfig.getPlanId());
-                    boolean shouldBuild = this.shouldBuildPlan(plan, prBuilderConfig.getBranch(), prData);
-                    if (shouldBuild) {
-                        PlanResultKey prk = this.queueBuild(plan, prData);
-                        resp.getWriter().write(prk.toString());
+                    if (plan != null)
+                    {
+                        GitRepository repo = (GitRepository) PlanHelper.getDefaultRepository(plan);
+                        boolean shouldBuild = this.shouldBuildPR(repo, prBuilderConfig.getBranch(), prData);
+                        if (shouldBuild)
+                        {
+                            PlanResultKey prk = this.queueBuild(plan, repo, prData);
+                            resp.getWriter().write(prk.toString());
+                            return;
+                        }
                     }
                 }
             }
@@ -99,36 +103,50 @@ public class PRBuilderServlet extends HttpServlet
         catch (ParseException e) {
             throw new ServletException("Weird response, could not be parsed!");
         }
+        resp.getWriter().write("Not building\n");
     }
 
-    private boolean shouldBuildPlan(Plan plan, String branch, JSONObject prData) {
-        // TODO: Check if plan was already built?
+    private boolean shouldBuildPR(GitRepository repo, String branch, JSONObject prData)
+    {
+        boolean shouldBuild = false;
+
         // Get base branch data
         // Note: we care about the merge target (base), not the source (head) now
         JSONObject baseBranch = (JSONObject) prData.get("base");
         JSONObject repoData = (JSONObject) baseBranch.get("repo");
         String baseRef = (String) baseBranch.get("ref");
-        String repoName = (String) repoData.get("full_name");
+        String cloneUrl = (String) repoData.get("clone_url");
+        String sshUrl = (String) repoData.get("ssh_url");
 
         // Get default repo for plan
-        GitHubRepository repo = (GitHubRepository) PlanHelper.getDefaultRepository(plan);
         if (repo != null)
         {
             // Return base name and branch match
-            String planRepoName = repo.getRepository();
-            return repoName.equals(planRepoName) && baseRef.equals(branch);
+            String planRepoUrl = repo.getRepositoryUrl();
+            shouldBuild = (planRepoUrl.equals(cloneUrl) || planRepoUrl.equals(sshUrl)) && baseRef.equals(branch);
         }
-        return false;
+        return shouldBuild;
     }
 
-    private PlanResultKey queueBuild(Plan plan, JSONObject prData)
+    private PlanResultKey queueBuild(Plan plan, GitRepository repo, JSONObject prData)
     {
-        // TODO: Actually implement this
-        // Note: here we determine what commit we need to execute and do it
+        // Get head branch name
+        JSONObject headBranch = (JSONObject) prData.get("head");
+        String headRef = (String) headBranch.get("ref");
+        String rev = (String) headBranch.get("sha");
+
+        // Get user
         User user = userManager.getUser("admin");
+
+        // Build immutable chain (from plan)
         ImmutableChain chain = (ImmutableChain) plan;
+
+        // Build params and vars for plan
         Map<String,String> params = new HashMap<String, String>();
+        params.put("customRevision", rev);
         Map<String,String> vars = new HashMap<String, String>();
+
+        // Start manual execution of plan
         ExecutionRequestResult err = planExecutionManager.startManualExecution(chain, user, params, vars);
         return err.getPlanResultKey();
     }

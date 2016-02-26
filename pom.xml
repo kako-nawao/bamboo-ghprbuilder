@@ -7,7 +7,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.globant.plugins</groupId>
     <artifactId>ghprbuilder</artifactId>
-    <version>0.1</version>
+    <version>0.2</version>
 
     <organization>
         <name>Globant</name>

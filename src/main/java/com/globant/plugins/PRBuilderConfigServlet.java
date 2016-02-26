@@ -8,7 +8,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import com.atlassian.bamboo.plan.Plan;
+import com.atlassian.bamboo.plan.PlanHelper;
 import com.atlassian.bamboo.plan.PlanManager;
+import com.atlassian.bamboo.plugins.git.GitRepository;
+
 import static com.google.common.base.Preconditions.*;
 
 
@@ -72,7 +75,16 @@ public class PRBuilderConfigServlet extends HttpServlet {
         {
             int planId = prbConfig.getPlanId();
             Plan plan = planManager.getPlanById(planId);
-            w.printf("<li>%s <a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></li>", plan.getBuildName(), prbConfig.getID());
+            String repoName = "N/A";
+            String buildName = "N/A";
+            if (plan != null)
+            {
+                buildName = plan.getBuildName();
+                GitRepository repo = (GitRepository) PlanHelper.getDefaultRepository(plan);
+                repoName = (repo != null) ? repo.getLocationIdentifier() : "N/A";
+            }
+
+            w.printf("<li>%s - %s/%s<a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></li>", buildName, repoName, prbConfig.getBranch(), prbConfig.getID());
         }
 
         w.write("</ul>");
