@@ -16,11 +16,12 @@ public class PRBuilderConfigServiceImpl implements PRBuilderConfigService
     }
 
     @Override
-    public PRBuilderConfig add(int planId, String branch)
+    public PRBuilderConfig add(int planId, String branch, String userName)
     {
         final PRBuilderConfig prbc = ao.create(PRBuilderConfig.class);
         prbc.setPlanId(planId);
         prbc.setBranch(branch);
+        prbc.setUserName(userName);
         prbc.save();
         return prbc;
     }

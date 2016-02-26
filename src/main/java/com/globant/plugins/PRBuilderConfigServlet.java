@@ -7,6 +7,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import com.atlassian.user.User;
+import com.atlassian.bamboo.user.BambooAuthenticationContext;
 import com.atlassian.bamboo.plan.Plan;
 import com.atlassian.bamboo.plan.PlanHelper;
 import com.atlassian.bamboo.plan.PlanManager;
@@ -24,11 +26,13 @@ public class PRBuilderConfigServlet extends HttpServlet {
 
     private final PRBuilderConfigService prbcService;
     private final PlanManager planManager;
+    private final BambooAuthenticationContext authContext;
 
-    public PRBuilderConfigServlet(PRBuilderConfigService prbcService, PlanManager planManager)
+    public PRBuilderConfigServlet(PRBuilderConfigService prbcService, PlanManager planManager, BambooAuthenticationContext authContext)
     {
         this.prbcService = checkNotNull(prbcService);
         this.planManager = checkNotNull(planManager);
+        this.authContext = checkNotNull(authContext);
     }
 
     @Override
@@ -69,7 +73,8 @@ public class PRBuilderConfigServlet extends HttpServlet {
         w.write("<button type=\"submit\">Add</button>");
         w.write("</form>");
 
-        w.write("<ul>");
+        w.write("<table><tbody>");
+        w.write("<tr><th>Plan</th><th>Repository</th><th>Branch</th><th>User</th><th></th></tr>");
 
         for (PRBuilderConfig prbConfig: prbcService.all()) // (2)
         {
@@ -84,10 +89,10 @@ public class PRBuilderConfigServlet extends HttpServlet {
                 repoName = (repo != null) ? repo.getLocationIdentifier() : "N/A";
             }
 
-            w.printf("<li>%s - %s/%s<a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></li>", buildName, repoName, prbConfig.getBranch(), prbConfig.getID());
+            w.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></td></tr>", buildName, repoName, prbConfig.getBranch(), prbConfig.getUserName(), prbConfig.getID());
         }
 
-        w.write("</ul>");
+        w.write("</tbody></table>");
         w.write("<script language='javascript'>document.forms[0].elements[0].focus();</script>");
         w.close();
     }
@@ -97,7 +102,15 @@ public class PRBuilderConfigServlet extends HttpServlet {
     {
         final int planId = Integer.parseInt(req.getParameter("plan-id"));
         final String branch = req.getParameter("branch");
-        prbcService.add(planId, branch);
-        res.sendRedirect(req.getContextPath() + "/plugins/servlet/ghprbuilder/config");
+        User user = authContext.getUser();
+        if (user != null)
+        {
+            prbcService.add(planId, branch, user.getName());
+            res.sendRedirect(req.getContextPath() + "/plugins/servlet/ghprbuilder/config");
+        }
+        else
+        {
+            res.getWriter().write("Error!");
+        }
     }
 }

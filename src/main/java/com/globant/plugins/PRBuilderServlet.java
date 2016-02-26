@@ -92,7 +92,7 @@ public class PRBuilderServlet extends HttpServlet
                         boolean shouldBuild = this.shouldBuildPR(repo, prBuilderConfig.getBranch(), prData);
                         if (shouldBuild)
                         {
-                            PlanResultKey prk = this.queueBuild(plan, repo, prData);
+                            PlanResultKey prk = this.queueBuild(plan, repo, prData, prBuilderConfig.getUserName());
                             resp.getWriter().write(prk.toString());
                             return;
                         }
@@ -128,7 +128,7 @@ public class PRBuilderServlet extends HttpServlet
         return shouldBuild;
     }
 
-    private PlanResultKey queueBuild(Plan plan, GitRepository repo, JSONObject prData)
+    private PlanResultKey queueBuild(Plan plan, GitRepository repo, JSONObject prData, String userName)
     {
         // Get head branch name
         JSONObject headBranch = (JSONObject) prData.get("head");
@@ -136,7 +136,7 @@ public class PRBuilderServlet extends HttpServlet
         String rev = (String) headBranch.get("sha");
 
         // Get user
-        User user = userManager.getUser("admin");
+        User user = userManager.getUser(userName);
 
         // Build immutable chain (from plan)
         ImmutableChain chain = (ImmutableChain) plan;

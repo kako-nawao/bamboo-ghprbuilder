@@ -33,17 +33,19 @@ Because if there's one thing I dislike about Jenkins' plugin is the fact that
 you need to configure many things twice.
 
 
-## What Can It Do So Far?
+## What Is Done?
 
-You can configure the plans to build (plan and branch, that's it), and have them be
-build *master* when you get a POST from GitHub. Useless, like I said.
+1. Configure plan to auto-build (selecting branch)
+2. Build correct revision on POST from github (yes!)
+3. Use proper authentication (plan is executed by the same user that added PRbuilder)
 
 
-## What Now?
+## What Remains to Do?
 
 In order of priority:
 
-1. Build the proper branch (PR head)
-2. Use proper authentication (we're using "admin" user as hack)
-3. Update PR status on trigger
-4. Update PR status on completion
+
+1. Use plan repo branch (no need to set that in config servlet)
+2. Update PR status on trigger
+3. Update PR status on completion
+4. Trigger all repos (branches) in the plan

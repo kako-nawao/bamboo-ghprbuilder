@@ -23,6 +23,9 @@ public interface PRBuilderConfig extends Entity
     String getBranch();
     void setBranch(String branch);
 
+    String getUserName();
+    void setUserName(String userName);
+
     String getLastMergeShah();
     void setLastMergeSash(String mergeShah);
 
