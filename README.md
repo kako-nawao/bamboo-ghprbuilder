@@ -35,17 +35,23 @@ you need to configure many things twice.
 
 ## What Is Done?
 
-1. Configure plan to auto-build (selecting branch)
-2. Build correct revision on POST from github (yes!)
-3. Use proper authentication (plan is executed by the same user that added PRbuilder)
+1. Add plans to auto-build
+2. Build correct revision on POST from github
+3. Use proper authentication
+
+The *baseline branch* is taken from the plan's repository configuration, so if
+your repo has branch *develop*, builds will only be triggered for pull request
+to merge to *develop*, ignoring any other requests.
+
+Builds are executed by the user that created every pull request builder. So if
+*Peter* adds a builder for *Plan X*, then pull requests' for *Plan X* are
+built by *Peter*.
 
 
 ## What Remains to Do?
 
 In order of priority:
 
-
-1. Use plan repo branch (no need to set that in config servlet)
-2. Update PR status on trigger
-3. Update PR status on completion
-4. Trigger all repos (branches) in the plan
+1. Update PR status on trigger
+2. Update PR status on completion
+3. Trigger all repos (branches) in the plan

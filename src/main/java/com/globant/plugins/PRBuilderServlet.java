@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.atlassian.bamboo.plugins.git.GitRepository;
+import com.atlassian.bamboo.plugins.git.GitHubRepository;
 import com.atlassian.bamboo.user.BambooUserManager;
 import com.atlassian.bamboo.plan.cache.ImmutableChain;
 import com.atlassian.bamboo.plan.ExecutionRequestResult;
@@ -86,15 +86,19 @@ public class PRBuilderServlet extends HttpServlet
                 {
                     // Get plan and maybe build it
                     Plan plan = planManager.getPlanById(prBuilderConfig.getPlanId());
-                    if (plan != null)
+                    if (plan != null && !plan.isSuspendedFromBuilding())
                     {
-                        GitRepository repo = (GitRepository) PlanHelper.getDefaultRepository(plan);
-                        boolean shouldBuild = this.shouldBuildPR(repo, prBuilderConfig.getBranch(), prData);
-                        if (shouldBuild)
+                        GitHubRepository repo = (GitHubRepository) PlanHelper.getDefaultRepository(plan);
+                        if (repo != null)
                         {
-                            PlanResultKey prk = this.queueBuild(plan, repo, prData, prBuilderConfig.getUserName());
-                            resp.getWriter().write(prk.toString());
-                            return;
+                            boolean shouldBuild = this.shouldBuildPR(repo, prData);
+                            if (shouldBuild)
+                            {
+                                PlanResultKey prk = this.queueBuild(plan, repo, prData, prBuilderConfig.getUserName());
+                                resp.getWriter().write(prk.toString());
+                                return;
+
+                            }
                         }
                     }
                 }
@@ -106,39 +110,31 @@ public class PRBuilderServlet extends HttpServlet
         resp.getWriter().write("Not building\n");
     }
 
-    private boolean shouldBuildPR(GitRepository repo, String branch, JSONObject prData)
+    private boolean shouldBuildPR(GitHubRepository repo, JSONObject prData)
     {
-        boolean shouldBuild = false;
+        // Get repo data to compare
+        String planRepoName = repo.getRepository();
+        String planBranch = repo.getVcsBranch().getName();
 
         // Get base branch data
         // Note: we care about the merge target (base), not the source (head) now
         JSONObject baseBranch = (JSONObject) prData.get("base");
         JSONObject repoData = (JSONObject) baseBranch.get("repo");
         String baseRef = (String) baseBranch.get("ref");
-        String cloneUrl = (String) repoData.get("clone_url");
-        String sshUrl = (String) repoData.get("ssh_url");
+        String pullRepoName = (String) repoData.get("full_name");
 
-        // Get default repo for plan
-        if (repo != null)
-        {
-            // Return base name and branch match
-            String planRepoUrl = repo.getRepositoryUrl();
-            shouldBuild = (planRepoUrl.equals(cloneUrl) || planRepoUrl.equals(sshUrl)) && baseRef.equals(branch);
-        }
-        return shouldBuild;
+        // Should build if url and branch match
+        return planRepoName.equals(pullRepoName) && baseRef.equals(planBranch);
     }
 
-    private PlanResultKey queueBuild(Plan plan, GitRepository repo, JSONObject prData, String userName)
+    private PlanResultKey queueBuild(Plan plan, GitHubRepository repo, JSONObject prData, String userName)
     {
-        // Get head branch name
+        // Get PR head revision
         JSONObject headBranch = (JSONObject) prData.get("head");
-        String headRef = (String) headBranch.get("ref");
         String rev = (String) headBranch.get("sha");
 
-        // Get user
+        // Get user and build immuetable chain from plan
         User user = userManager.getUser(userName);
-
-        // Build immutable chain (from plan)
         ImmutableChain chain = (ImmutableChain) plan;
 
         // Build params and vars for plan
@@ -146,7 +142,7 @@ public class PRBuilderServlet extends HttpServlet
         params.put("customRevision", rev);
         Map<String,String> vars = new HashMap<String, String>();
 
-        // Start manual execution of plan
+        // Start manual execution of plan and return result key
         ExecutionRequestResult err = planExecutionManager.startManualExecution(chain, user, params, vars);
         return err.getPlanResultKey();
     }

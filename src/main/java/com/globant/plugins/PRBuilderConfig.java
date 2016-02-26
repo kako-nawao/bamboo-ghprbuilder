@@ -20,9 +20,6 @@ public interface PRBuilderConfig extends Entity
     int getPlanId();
     void setPlanId(int planId);
 
-    String getBranch();
-    void setBranch(String branch);
-
     String getUserName();
     void setUserName(String userName);
 

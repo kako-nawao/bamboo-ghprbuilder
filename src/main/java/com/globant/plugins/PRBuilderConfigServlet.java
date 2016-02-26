@@ -12,7 +12,7 @@ import com.atlassian.bamboo.user.BambooAuthenticationContext;
 import com.atlassian.bamboo.plan.Plan;
 import com.atlassian.bamboo.plan.PlanHelper;
 import com.atlassian.bamboo.plan.PlanManager;
-import com.atlassian.bamboo.plugins.git.GitRepository;
+import com.atlassian.bamboo.plugins.git.GitHubRepository;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -68,7 +68,7 @@ public class PRBuilderConfigServlet extends HttpServlet {
         {
             w.printf("<option value=\"%s\">%s</option>", plan.getId(), plan.getBuildName());
         }
-        w.write("<input type=\"text\" name=\"branch\"/>");
+        w.write("</select>");
         w.write("&nbsp;&nbsp;");
         w.write("<button type=\"submit\">Add</button>");
         w.write("</form>");
@@ -81,15 +81,20 @@ public class PRBuilderConfigServlet extends HttpServlet {
             int planId = prbConfig.getPlanId();
             Plan plan = planManager.getPlanById(planId);
             String repoName = "N/A";
+            String branchName = "N/A";
             String buildName = "N/A";
             if (plan != null)
             {
                 buildName = plan.getBuildName();
-                GitRepository repo = (GitRepository) PlanHelper.getDefaultRepository(plan);
-                repoName = (repo != null) ? repo.getLocationIdentifier() : "N/A";
+                GitHubRepository repo = (GitHubRepository) PlanHelper.getDefaultRepository(plan);
+                if (repo != null)
+                {
+                    repoName = repo.getRepository();
+                    branchName = repo.getVcsBranch().getName();
+                }
             }
 
-            w.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></td></tr>", buildName, repoName, prbConfig.getBranch(), prbConfig.getUserName(), prbConfig.getID());
+            w.printf("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href=\"/bamboo/plugins/servlet/ghprbuilder/config?id=%s&action=delete\">x</a></td></tr>", buildName, repoName, branchName, prbConfig.getUserName(), prbConfig.getID());
         }
 
         w.write("</tbody></table>");
@@ -101,11 +106,10 @@ public class PRBuilderConfigServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException
     {
         final int planId = Integer.parseInt(req.getParameter("plan-id"));
-        final String branch = req.getParameter("branch");
         User user = authContext.getUser();
         if (user != null)
         {
-            prbcService.add(planId, branch, user.getName());
+            prbcService.add(planId, user.getName());
             res.sendRedirect(req.getContextPath() + "/plugins/servlet/ghprbuilder/config");
         }
         else

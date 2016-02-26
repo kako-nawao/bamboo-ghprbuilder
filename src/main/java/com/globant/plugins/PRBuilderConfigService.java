@@ -14,7 +14,7 @@ import com.atlassian.bamboo.plan.Plan;
 public interface PRBuilderConfigService
 {
 
-    PRBuilderConfig add(int planId, String branch, String userName);
+    PRBuilderConfig add(int planId, String userName);
     PRBuilderConfig delete(int prbcId);
 
     List<PRBuilderConfig> all();
